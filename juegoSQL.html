@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Island Survival - La Aventura de Erick</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@300;400;500&display=swap');
+        
+        :root {
+            --primary: #00d4ff;
+            --secondary: #ff6b35;
+            --success: #00ff88;
+            --danger: #ff3366;
+            --dark: #0a0a0a;
+            --light: #f8f9fa;
+            --ocean: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --island: linear-gradient(135deg, #8EC5FC 0%, #E0C3FC 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--ocean);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(10, 10, 10, 0.95);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            border-right: 2px solid var(--primary);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+        }
+
+        .player-info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-info::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(transparent, var(--primary), transparent 30%);
+            animation: rotate 4s linear infinite;
+            opacity: 0.1;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .level-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .island-btn {
+            background: var(--island);
+            border: 2px solid var(--primary);
+            border-radius: 15px;
+            padding: 15px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .island-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .island-btn.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, #666 0%, #999 100%);
+        }
+
+        .island-btn.completed {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+        }
+
+        .challenge-area {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .story-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .challenge-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .sql-editor {
+            background: #1e1e1e;
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            font-size: 14px;
+            width: 100%;
+            min-height: 120px;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, #0099cc 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #00cc66 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, #cc0033 100%);
+        }
+
+        .result-area {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 50px;
+        }
+
+        .result-success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success);
+            color: #006633;
+        }
+
+        .result-error {
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid var(--danger);
+            color: #cc0033;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            height: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            height: 100%;
+            transition: width 0.3s ease;
+            border-radius: 25px;
+        }
+
+        .tip-box {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--secondary);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 5px solid var(--secondary);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+
+        .inventory {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .floating-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .floating-sql {
+            position: absolute;
+            color: rgba(0, 212, 255, 0.3);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            animation: float 15s linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .achievement {
+            background: linear-gradient(135deg, gold 0%, #ffcc00 100%);
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            margin: 5px;
+            font-weight: bold;
+            animation: shine 2s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .schema-viewer {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        .table-preview {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-preview h4 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .preview-table th {
+            background: linear-gradient(135deg, var(--primary) 0%, #0099cc 100%);
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #ddd;
+        }
+
+        .preview-table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .preview-table tr:nth-child(even) td {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .preview-table tr:hover td {
+            background: rgba(0, 212, 255, 0.1);
+            transition: background 0.2s ease;
+        }
+
+        .query-result-section {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 250, 0.95) 100%);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .query-result-section h4 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-family: 'Orbitron', monospace;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-stats {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #0066cc;
+        }
+
+        .toggle-preview {
+            background: linear-gradient(135deg, var(--secondary) 0%, #cc5500 100%);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            margin: 5px 0;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-preview:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-elements" id="floatingElements"></div>
+    
+    <div class="game-container">
+        <div class="sidebar">
+            <div class="player-info">
+                <h2 style="font-family: 'Orbitron', monospace; color: var(--primary);">🏝️ ERICK EL SUPERVIVIENTE</h2>
+                <div style="position: relative; z-index: 1;">
+                    <p><strong>Nivel:</strong> <span id="playerLevel">1</span></p>
+                    <p><strong>XP:</strong> <span id="playerXP">0</span>/100</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="xpBar" style="width: 0%"></div>
+                    </div>
+                    <p><strong>Isla Actual:</strong> <span id="currentIsland">Playa del Despertar</span></p>
+                    <p><strong>Desafíos Completados:</strong> <span id="completedChallenges">0</span>/70</p>
+                </div>
+            </div>
+
+            <div class="inventory">
+                <h3 style="color: var(--primary); margin-bottom: 10px;">📦 Inventario</h3>
+                <div id="inventoryList">
+                    <div class="inventory-item">
+                        <span>🥥 Cocos</span>
+                        <span id="coconuts">0</span>
+                    </div>
+                    <div class="inventory-item">
+                        <span>🐟 Pescados</span>
+                        <span id="fish">0</span>
+                    </div>
+                    <div class="inventory-item">
+                        <span>🔥 Leña</span>
+                        <span id="wood">0</span>
+                    </div>
+                    <div class="inventory-item">
+                        <span>💎 Cristales SQL</span>
+                        <span id="crystals">0</span>
+                    </div>
+                    <div class="inventory-item">
+                        <span>👥 Supervivientes</span>
+                        <span id="survivors">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3 style="color: var(--primary); margin-bottom: 15px;">🏝️ Mapa de Islas</h3>
+                <div class="level-selector">
+                    <button class="island-btn" onclick="selectIsland(1)">
+                        🏖️<br>Playa del<br>Despertar
+                    </button>
+                    <button class="island-btn locked" onclick="selectIsland(2)">
+                        🌴<br>Bosque de<br>Datos
+                    </button>
+                    <button class="island-btn locked" onclick="selectIsland(3)">
+                        🏔️<br>Montaña<br>JOIN
+                    </button>
+                    <button class="island-btn locked" onclick="selectIsland(4)">
+                        🌋<br>Volcán<br>Subconsultas
+                    </button>
+                    <button class="island-btn locked" onclick="selectIsland(5)">
+                        🏰<br>Fortaleza<br>Avanzada
+                    </button>
+                    <button class="island-btn locked" onclick="selectIsland(6)">
+                        🛸<br>Base<br>Alien
+                    </button>
+                    <button class="island-btn locked" onclick="selectIsland(7)">
+                        ✈️<br>Hangar de<br>Escape
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3 style="color: var(--success); margin-bottom: 10px;">🏆 Logros</h3>
+                <div id="achievementsList">
+                    <small style="color: #ccc;">Completa desafíos para desbloquear logros</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="story-section" id="storySection">
+                <h2 style="font-family: 'Orbitron', monospace; margin-bottom: 15px;">📖 La Historia de Erick</h2>
+                <p id="storyText">¡Bienvenido a SQL Island Survival! Eres Erick, y tu avión acaba de estrellarse en un misterioso archipiélago. Para sobrevivir y escapar, deberás dominar el poder del SQL. Cada isla tiene su propio servidor de base de datos con desafíos únicos. ¡Tu aventura comienza ahora!</p>
+            </div>
+
+            <div class="challenge-area" id="challengeArea">
+                <div class="challenge-title" id="challengeTitle">Cargando desafío...</div>
+                <div id="challengeDescription"></div>
+                
+                <!-- Vista previa de las tablas -->
+                <div class="table-preview" id="tablePreview">
+                    <h4>📊 Datos Disponibles</h4>
+                    <button class="toggle-preview" onclick="toggleTablePreview()">👁️ Mostrar/Ocultar Tablas</button>
+                    <div id="tablePreviewContent" style="display: block;"></div>
+                </div>
+                
+                <div class="schema-viewer" id="schemaViewer"></div>
+                <textarea class="sql-editor" id="sqlEditor" placeholder="-- Escribe tu consulta SQL aquí
+-- Ejemplo: SELECT * FROM tabla WHERE condicion;
+-- Presiona Ctrl+Enter para ejecutar"></textarea>
+                <div>
+                    <button class="btn" onclick="executeQuery()">🚀 Ejecutar Query</button>
+                    <button class="btn btn-success" onclick="showHint()">💡 Pista</button>
+                    <button class="btn btn-danger" onclick="resetChallenge()">🔄 Reiniciar</button>
+                    <button class="toggle-preview" onclick="refreshTableData()">🔄 Actualizar Datos</button>
+                </div>
+                
+                <!-- Sección de resultados mejorada -->
+                <div class="query-result-section" id="queryResultSection" style="display: none;">
+                    <h4>🎯 Resultado de tu Consulta</h4>
+                    <div id="resultStats" class="result-stats"></div>
+                    <div id="resultArea"></div>
+                </div>
+                
+                <div class="tip-box" id="tipBox" style="display: none;">
+                    <h4 style="color: var(--secondary); margin-bottom: 10px;">💡 Tip SQL del Día</h4>
+                    <p id="tipText"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para logros y eventos especiales -->
+    <div id="achievementModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">🎉 ¡Logro Desbloqueado!</h2>
+            <div id="modalContent"></div>
+            <button class="btn" onclick="closeModal()">Continuar Aventura</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.min.js"></script>
+    <script>
+        // Estado del juego
+        let gameState = {
+            currentIsland: 1,
+            currentChallenge: 1,
+            playerLevel: 1,
+            playerXP: 0,
+            completedChallenges: 0,
+            inventory: {
+                coconuts: 0,
+                fish: 0,
+                wood: 0,
+                crystals: 0,
+                survivors: 1
+            },
+            unlockedIslands: [1],
+            achievements: [],
+            db: null
+        };
+
+        // Definición de islas y desafíos
+        const islands = {
+            1: {
+                name: "Playa del Despertar",
+                theme: "Conceptos básicos de SQL",
+                story: "Despiertas en una playa tropical. El agua salada aún gotea de tu ropa cuando notas una extraña terminal brillando entre los restos del avión. Parece ser un sistema de supervivencia basado en SQL. ¡Tu primera lección comienza aquí!",
+                challenges: [
+                    {
+                        title: "🥥 Inventario de Supervivencia",
+                        description: "Has encontrado algunos suministros dispersos. Necesitas hacer un inventario de todo lo que tienes para sobrevivir.",
+                        schema: `CREATE TABLE suministros (
+    id INTEGER PRIMARY KEY,
+    item TEXT NOT NULL,
+    cantidad INTEGER,
+    tipo TEXT,
+    ubicacion TEXT
+);
+
+INSERT INTO suministros VALUES 
+(1, 'Coco', 5, 'comida', 'playa'),
+(2, 'Agua embotellada', 3, 'bebida', 'avion'),
+(3, 'Cuerda', 1, 'herramienta', 'avion'),
+(4, 'Linterna', 1, 'herramienta', 'mochila'),
+(5, 'Cerillas', 2, 'herramienta', 'mochila');`,
+                        task: "Muestra todos los suministros disponibles ordenados por cantidad de mayor a menor.",
+                        solution: "SELECT * FROM suministros ORDER BY cantidad DESC",
+                        hint: "Usa SELECT * FROM tabla ORDER BY columna DESC para ordenar de mayor a menor",
+                        reward: { xp: 10, coconuts: 2 },
+                        tip: "ORDER BY es fundamental para organizar resultados. DESC = descendente, ASC = ascendente (por defecto)."
+                    },
+                    {
+                        title: "🔥 Recursos para Fogata",
+                        description: "La noche se acerca y necesitas hacer fuego. Busca solo los elementos que te sirvan como herramientas.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Encuentra todos los suministros que sean del tipo 'herramienta'.",
+                        solution: "SELECT * FROM suministros WHERE tipo = 'herramienta'",
+                        hint: "Usa WHERE para filtrar por condiciones específicas",
+                        reward: { xp: 15, wood: 3 },
+                        tip: "WHERE es como un filtro. Puedes usar =, <>, >, <, >=, <= para comparar valores."
+                    },
+                    {
+                        title: "🐟 Conteo de Alimentos",
+                        description: "Necesitas saber exactamente cuántos elementos de comida tienes para planificar tus comidas.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Cuenta cuántos suministros de tipo 'comida' tienes en total.",
+                        solution: "SELECT COUNT(*) FROM suministros WHERE tipo = 'comida'",
+                        hint: "COUNT(*) cuenta las filas que cumplen la condición",
+                        reward: { xp: 20, fish: 1 },
+                        tip: "Las funciones de agregación como COUNT(), SUM(), AVG(), MAX(), MIN() son muy poderosas."
+                    },
+                    {
+                        title: "💧 Ubicaciones de Recursos",
+                        description: "Necesitas mapear dónde están tus recursos para optimizar la recolección.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Muestra todas las ubicaciones únicas donde tienes suministros.",
+                        solution: "SELECT DISTINCT ubicacion FROM suministros",
+                        hint: "DISTINCT elimina duplicados de los resultados",
+                        reward: { xp: 15, crystals: 1 },
+                        tip: "DISTINCT es útil para encontrar valores únicos. También puedes usar GROUP BY para agrupar."
+                    },
+                    {
+                        title: "🔍 Búsqueda de Emergencia",
+                        description: "Busca rápidamente cualquier suministro que tenga 'agua' en su nombre, sin importar mayúsculas.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Encuentra suministros cuyo nombre contenga la palabra 'agua' (insensible a mayúsculas).",
+                        solution: "SELECT * FROM suministros WHERE LOWER(item) LIKE '%agua%'",
+                        hint: "LIKE con % busca patrones. LOWER() convierte a minúsculas",
+                        reward: { xp: 25, coconuts: 1 },
+                        tip: "LIKE es perfecto para búsquedas de texto. % significa 'cualquier cosa', _ significa 'un carácter'."
+                    },
+                    {
+                        title: "📊 Resumen de Supervivencia",
+                        description: "Crea un reporte resumido de tus recursos por tipo para una mejor planificación.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Agrupa los suministros por tipo y muestra la cantidad total de cada tipo.",
+                        solution: "SELECT tipo, SUM(cantidad) as total FROM suministros GROUP BY tipo",
+                        hint: "GROUP BY agrupa filas similares, SUM() suma valores",
+                        reward: { xp: 30, crystals: 2 },
+                        tip: "GROUP BY es esencial para crear reportes. Siempre que uses funciones de agregación con otras columnas, necesitas GROUP BY."
+                    },
+                    {
+                        title: "⚡ Suministros Críticos",
+                        description: "Identifica suministros que estén escaseando (cantidad menor a 3) para prioriz ar su búsqueda.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Encuentra suministros con cantidad menor a 3, ordenados por cantidad ascendente.",
+                        solution: "SELECT * FROM suministros WHERE cantidad < 3 ORDER BY cantidad ASC",
+                        hint: "Combina WHERE con ORDER BY para filtrar y ordenar",
+                        reward: { xp: 20, wood: 2 },
+                        tip: "Puedes combinar múltiples cláusulas: SELECT... FROM... WHERE... GROUP BY... HAVING... ORDER BY..."
+                    },
+                    {
+                        title: "🏝️ Inventario Total",
+                        description: "Calcula el total de todos tus suministros para evaluar tus posibilidades de supervivencia.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Calcula la suma total de la cantidad de todos los suministros.",
+                        solution: "SELECT SUM(cantidad) as total_suministros FROM suministros",
+                        hint: "SUM() suma todos los valores de una columna",
+                        reward: { xp: 25, fish: 2 },
+                        tip: "Las funciones de agregación operan sobre conjuntos de filas. Son muy útiles para estadísticas."
+                    },
+                    {
+                        title: "🎯 Búsqueda Específica",
+                        description: "Busca herramientas que estén en tu mochila para acceso rápido en emergencias.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Encuentra herramientas que estén específicamente en la 'mochila'.",
+                        solution: "SELECT * FROM suministros WHERE tipo = 'herramienta' AND ubicacion = 'mochila'",
+                        hint: "AND combina múltiples condiciones. También existe OR",
+                        reward: { xp: 35, crystals: 3 },
+                        tip: "Los operadores lógicos AND, OR, NOT te permiten crear condiciones complejas. Usa paréntesis para agrupar."
+                    },
+                    {
+                        title: "🚨 Preparación para la Noche",
+                        description: "La primera noche se acerca. Haz un inventario final con información detallada de cada suministro.",
+                        schema: "/* Usando la misma tabla suministros */",
+                        task: "Muestra todos los suministros ordenados primero por tipo y luego por cantidad descendente.",
+                        solution: "SELECT * FROM suministros ORDER BY tipo, cantidad DESC",
+                        hint: "Puedes ordenar por múltiples columnas separándolas con comas",
+                        reward: { xp: 40, coconuts: 3, wood: 2, survivors: 1 },
+                        tip: "ORDER BY acepta múltiples columnas. El orden importa: primera columna es prioritaria."
+                    }
+                ]
+            },
+            2: {
+                name: "Bosque de Datos",
+                theme: "Manipulación y filtrado avanzado",
+                story: "Después de sobrevivir tu primera noche, exploras el interior de la isla. Un denso bosque se alza ante ti, y en su corazón encuentras una antigua estructura con múltiples terminales de datos. Los árboles parecen susurrar secretos en lenguaje SQL...",
+                challenges: [
+                    {
+                        title: "🌳 Flora de la Isla",
+                        description: "Has descubierto una rica variedad de plantas. Necesitas catalogarlas para identificar cuáles son comestibles, medicinales o útiles.",
+                        schema: `CREATE TABLE plantas (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    tipo TEXT,
+    comestible BOOLEAN,
+    medicinal BOOLEAN,
+    toxica BOOLEAN,
+    altura_cm INTEGER,
+    abundancia TEXT,
+    ubicacion_bosque TEXT
+);
+
+INSERT INTO plantas VALUES 
+(1, 'Palmera cocotera', 'árbol', 1, 0, 0, 800, 'común', 'costa'),
+(2, 'Bambú gigante', 'bambú', 0, 0, 0, 1200, 'abundante', 'interior'),
+(3, 'Jengibre silvestre', 'hierba', 1, 1, 0, 45, 'raro', 'sombra'),
+(4, 'Helechos grandes', 'helecho', 0, 0, 0, 150, 'abundante', 'húmedo'),
+(5, 'Fruta del dragón', 'cactus', 1, 0, 0, 200, 'raro', 'seco'),
+(6, 'Mandioca silvestre', 'tubérculo', 1, 0, 0, 180, 'común', 'claro'),
+(7, 'Ortiga venenosa', 'hierba', 0, 0, 1, 80, 'común', 'sombra'),
+(8, 'Aloe vera', 'suculenta', 0, 1, 0, 60, 'común', 'seco');`,
+                        task: "Encuentra todas las plantas comestibles que NO sean tóxicas, ordenadas por altura.",
+                        solution: "SELECT * FROM plantas WHERE comestible = 1 AND toxica = 0 ORDER BY altura_cm",
+                        hint: "Usa AND para combinar condiciones. 1 = verdadero, 0 = falso en SQLite",
+                        reward: { xp: 50, coconuts: 5, fish: 2 },
+                        tip: "En SQLite, los valores booleanos se almacenan como 1 (true) y 0 (false). Puedes usar = 1 o simplemente el nombre de la columna."
+                    }
+                    // Continúa con más desafíos del bosque...
+                ]
+            }
+            // Continúa con las demás islas...
+        };
+
+        // Tips SQL curiosos
+        const sqlTips = [
+            "¿Sabías que SQL significa 'Structured Query Language' y se pronuncia 'sequel' o 'es-que-el'?",
+            "El comando LIMIT es tu amigo cuando trabajas con tablas enormes. ¡Evita crashes!",
+            "NULL no es lo mismo que una cadena vacía ''. NULL significa 'valor desconocido'.",
+            "Los índices son como el índice de un libro: hacen las búsquedas mucho más rápidas.",
+            "HAVING es como WHERE, pero para grupos. WHERE filtra filas, HAVING filtra grupos.",
+            "Puedes usar aliases con AS para renombrar columnas: SELECT nombre AS superviviente FROM tabla",
+            "COALESCE(col1, col2, 'default') devuelve el primer valor no-NULL. ¡Perfecto para valores por defecto!",
+            "EXISTS es más eficiente que IN cuando trabajas con subconsultas grandes.",
+            "CASE WHEN es como un if-else en SQL. Muy útil para crear columnas condicionales.",
+            "UNION combina resultados de dos consultas, UNION ALL incluye duplicados.",
+            "ROW_NUMBER() te da un número de fila único para cada resultado. ¡Muy útil para paginación!",
+            "Los JOINs son como conectar piezas de LEGO: LEFT, RIGHT, INNER, FULL OUTER.",
+            "LIKE '%texto%' busca en cualquier parte, 'texto%' solo al inicio, '%texto' solo al final.",
+            "GROUP_CONCAT() (SQLite) concatena valores de un grupo en una sola cadena.",
+            "DISTINCT cuenta valores únicos, pero COUNT(DISTINCT columna) cuenta únicos por columna."
+        ];
+
+        // Inicialización del juego
+        let currentChallenge = null;
+
+        // Función para crear elementos flotantes de SQL
+        function createFloatingSQL() {
+            const sqlCommands = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'GROUP BY', 'ORDER BY', 'INSERT', 'UPDATE', 'DELETE', 'HAVING'];
+            const container = document.getElementById('floatingElements');
+            
+            setInterval(() => {
+                const element = document.createElement('div');
+                element.className = 'floating-sql';
+                element.textContent = sqlCommands[Math.floor(Math.random() * sqlCommands.length)];
+                element.style.left = Math.random() * 100 + '%';
+                element.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(element);
+                
+                setTimeout(() => {
+                    container.removeChild(element);
+                }, 15000);
+            }, 3000);
+        }
+
+        // Función para actualizar la UI del jugador
+        function updatePlayerUI() {
+            document.getElementById('playerLevel').textContent = gameState.playerLevel;
+            document.getElementById('playerXP').textContent = gameState.playerXP;
+            document.getElementById('currentIsland').textContent = islands[gameState.currentIsland].name;
+            document.getElementById('completedChallenges').textContent = gameState.completedChallenges;
+            
+            // Actualizar barra de XP
+            const xpPercentage = (gameState.playerXP % 100);
+            document.getElementById('xpBar').style.width = xpPercentage + '%';
+            
+            // Actualizar inventario
+            document.getElementById('coconuts').textContent = gameState.inventory.coconuts;
+            document.getElementById('fish').textContent = gameState.inventory.fish;
+            document.getElementById('wood').textContent = gameState.inventory.wood;
+            document.getElementById('crystals').textContent = gameState.inventory.crystals;
+            document.getElementById('survivors').textContent = gameState.inventory.survivors;
+        }
+
+        // Función para seleccionar isla
+        function selectIsland(islandNumber) {
+            if (!gameState.unlockedIslands.includes(islandNumber)) {
+                showModal('🔒 Isla Bloqueada', 'Debes completar más desafíos en la isla actual para desbloquear esta nueva área.');
+                return;
+            }
+            
+            gameState.currentIsland = islandNumber;
+            gameState.currentChallenge = 1;
+            loadChallenge();
+            updateIslandButtons();
+        }
+
+        // Función para actualizar botones de islas
+        function updateIslandButtons() {
+            const buttons = document.querySelectorAll('.island-btn');
+            buttons.forEach((btn, index) => {
+                const islandNum = index + 1;
+                btn.classList.remove('locked', 'completed');
+                
+                if (!gameState.unlockedIslands.includes(islandNum)) {
+                    btn.classList.add('locked');
+                } else if (islandCompleted(islandNum)) {
+                    btn.classList.add('completed');
+                }
+            });
+        }
+
+        // Función para verificar si una isla está completada
+        function islandCompleted(islandNumber) {
+            const island = islands[islandNumber];
+            if (!island) return false;
+            
+            // Verificar si todos los desafíos de la isla están completados
+            return island.challenges.every((challenge, index) => {
+                return gameState.completedChallenges >= getTotalChallengesUpTo(islandNumber - 1) + (index + 1);
+            });
+        }
+
+        // Función para obtener el número total de desafíos hasta cierta isla
+        function getTotalChallengesUpTo(islandNumber) {
+            let total = 0;
+            for (let i = 1; i <= islandNumber; i++) {
+                if (islands[i]) {
+                    total += islands[i].challenges.length;
+                }
+            }
+            return total;
+        }
+
+        // Función para cargar un desafío
+        function loadChallenge() {
+            const island = islands[gameState.currentIsland];
+            if (!island) return;
+            
+            const challengeIndex = gameState.currentChallenge - 1;
+            const challenge = island.challenges[challengeIndex];
+            
+            if (!challenge) {
+                // No hay más desafíos en esta isla
+                if (gameState.currentIsland < Object.keys(islands).length) {
+                    showModal('🎉 ¡Isla Completada!', 
+                        `¡Felicidades! Has completado ${island.name}. Una nueva isla ha aparecido en el horizonte...`);
+                    unlockNextIsland();
+                } else {
+                    showGameComplete();
+                }
+                return;
+            }
+            
+            currentChallenge = challenge;
+            
+            // Actualizar historia
+            document.getElementById('storyText').textContent = island.story;
+            
+            // Actualizar desafío
+            document.getElementById('challengeTitle').textContent = challenge.title;
+            document.getElementById('challengeDescription').innerHTML = `
+                <p><strong>📋 Desafío ${gameState.currentChallenge}/${island.challenges.length}:</strong></p>
+                <p>${challenge.description}</p>
+                <p><strong>🎯 Tu misión:</strong> ${challenge.task}</p>
+            `;
+            
+            // Mostrar esquema de base de datos
+            document.getElementById('schemaViewer').textContent = challenge.schema;
+            
+            // Limpiar editor y resultados
+            document.getElementById('sqlEditor').value = '';
+            document.getElementById('queryResultSection').style.display = 'none';
+            document.getElementById('tipBox').style.display = 'none';
+            
+            // Inicializar base de datos para este desafío
+            initDatabase(challenge.schema);
+        }
+
+        // Función para inicializar la base de datos
+        async function initDatabase(schema) {
+            try {
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
+                
+                gameState.db = new SQL.Database();
+                
+                // Ejecutar el schema
+                if (schema && schema !== "/* Usando la misma tabla suministros */") {
+                    gameState.db.exec(schema);
+                } else if (gameState.currentIsland === 1) {
+                    // Para desafíos que usan la tabla de suministros
+                    const suministrosSchema = `CREATE TABLE suministros (
+    id INTEGER PRIMARY KEY,
+    item TEXT NOT NULL,
+    cantidad INTEGER,
+    tipo TEXT,
+    ubicacion TEXT
+);
+
+INSERT INTO suministros VALUES 
+(1, 'Coco', 5, 'comida', 'playa'),
+(2, 'Agua embotellada', 3, 'bebida', 'avion'),
+(3, 'Cuerda', 1, 'herramienta', 'avion'),
+(4, 'Linterna', 1, 'herramienta', 'mochila'),
+(5, 'Cerillas', 2, 'herramienta', 'mochila');`;
+                    gameState.db.exec(suministrosSchema);
+                }
+                
+                // Mostrar vista previa de las tablas
+                showTablePreview();
+                
+            } catch (error) {
+                console.error('Error inicializando base de datos:', error);
+                showResult('Error inicializando la base de datos. Recarga la página.', 'error');
+            }
+        }
+
+        // Función para mostrar vista previa de las tablas
+        function showTablePreview() {
+            if (!gameState.db) return;
+            
+            try {
+                // Obtener lista de tablas
+                const tables = gameState.db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+                
+                if (tables.length === 0) {
+                    document.getElementById('tablePreviewContent').innerHTML = '<p>No hay tablas disponibles.</p>';
+                    return;
+                }
+                
+                let html = '';
+                
+                tables[0].values.forEach(tableRow => {
+                    const tableName = tableRow[0];
+                    html += `<div style="margin-bottom: 20px;">`;
+                    html += `<h5 style="color: var(--primary); margin-bottom: 10px;">📋 Tabla: ${tableName}</h5>`;
+                    
+                    // Obtener datos de la tabla
+                    const tableData = gameState.db.exec(`SELECT * FROM ${tableName} LIMIT 100`);
+                    
+                    if (tableData.length > 0) {
+                        const data = tableData[0];
+                        html += `<div class="table-container">`;
+                        html += `<table class="preview-table">`;
+                        
+                        // Encabezados
+                        html += '<tr>';
+                        data.columns.forEach(col => {
+                            html += `<th>${col}</th>`;
+                        });
+                        html += '</tr>';
+                        
+                        // Datos (limitar a 10 filas para vista previa)
+                        const rowsToShow = Math.min(data.values.length, 10);
+                        for (let i = 0; i < rowsToShow; i++) {
+                            html += '<tr>';
+                            data.values[i].forEach(cell => {
+                                html += `<td>${cell !== null ? cell : '<em>NULL</em>'}</td>`;
+                            });
+                            html += '</tr>';
+                        }
+                        
+                        if (data.values.length > 10) {
+                            html += `<tr><td colspan="${data.columns.length}" style="text-align: center; font-style: italic; color: #666;">... y ${data.values.length - 10} filas más</td></tr>`;
+                        }
+                        
+                        html += '</table>';
+                        html += '</div>';
+                        html += `<small style="color: #666;">Total de filas: ${data.values.length}</small>`;
+                    } else {
+                        html += '<p><em>Tabla vacía</em></p>';
+                    }
+                    
+                    html += '</div>';
+                });
+                
+                document.getElementById('tablePreviewContent').innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error mostrando vista previa:', error);
+                document.getElementById('tablePreviewContent').innerHTML = '<p>Error cargando vista previa de las tablas.</p>';
+            }
+        }
+
+        // Función para alternar vista previa de tablas
+        function toggleTablePreview() {
+            const content = document.getElementById('tablePreviewContent');
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Función para actualizar datos de tablas
+        function refreshTableData() {
+            showTablePreview();
+            showResult('📊 Datos de tablas actualizados', 'success');
+        }
+
+        // Función para ejecutar consulta SQL (mejorada)
+        function executeQuery() {
+            const query = document.getElementById('sqlEditor').value.trim();
+            
+            if (!query) {
+                showResult('Por favor, escribe una consulta SQL.', 'error');
+                return;
+            }
+            
+            if (!gameState.db) {
+                showResult('Base de datos no inicializada. Recarga la página.', 'error');
+                return;
+            }
+            
+            try {
+                const startTime = performance.now();
+                const result = gameState.db.exec(query);
+                const endTime = performance.now();
+                const executionTime = (endTime - startTime).toFixed(2);
+                
+                // Mostrar sección de resultados
+                document.getElementById('queryResultSection').style.display = 'block';
+                
+                if (result.length === 0) {
+                    // Consulta ejecutada pero sin resultados (INSERT, UPDATE, DELETE, etc.)
+                    showQueryResult(null, executionTime, query);
+                    
+                    // Verificar si afectó filas
+                    if (query.toLowerCase().includes('insert') || 
+                        query.toLowerCase().includes('update') || 
+                        query.toLowerCase().includes('delete')) {
+                        showResult('✅ Consulta ejecutada correctamente. Datos modificados.', 'success');
+                        // Actualizar vista previa
+                        showTablePreview();
+                    } else {
+                        showResult('⚠️ Consulta ejecutada, pero no devolvió resultados.', 'error');
+                    }
+                    return;
+                }
+                
+                // Mostrar resultados en tabla
+                showQueryResult(result[0], executionTime, query);
+                
+                // Verificar si la solución es correcta
+                if (checkSolution(query)) {
+                    showResult('🎉 ¡Excelente! Has completado este desafío correctamente.', 'success');
+                    completeChallenge();
+                } else {
+                    showResult('✅ La consulta funciona bien, pero verifica si cumple exactamente con lo solicitado.', 'error');
+                }
+                
+            } catch (error) {
+                document.getElementById('queryResultSection').style.display = 'block';
+                showQueryResult(null, 0, query, error.message);
+                showResult(`❌ Error en la consulta: ${error.message}`, 'error');
+            }
+        }
+
+        // Función para mostrar resultado de consulta (nueva)
+        function showQueryResult(result, executionTime, query, error = null) {
+            const resultArea = document.getElementById('resultArea');
+            const resultStats = document.getElementById('resultStats');
+            
+            if (error) {
+                resultStats.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>❌ Error en la consulta</span>
+                        <span>Tiempo: ${executionTime}ms</span>
+                    </div>
+                `;
+                resultArea.innerHTML = `<div style="color: #cc0033; padding: 10px; background: rgba(255, 51, 102, 0.1); border-radius: 5px;">
+                    <strong>Error:</strong> ${error}
+                </div>`;
+                return;
+            }
+            
+            if (!result) {
+                resultStats.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>✅ Consulta ejecutada (sin resultados)</span>
+                        <span>Tiempo: ${executionTime}ms</span>
+                    </div>
+                `;
+                resultArea.innerHTML = '<p><em>La consulta se ejecutó correctamente pero no devolvió datos.</em></p>';
+                return;
+            }
+            
+            // Estadísticas de la consulta
+            resultStats.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <span>📊 Filas: <strong>${result.values.length}</strong></span>
+                    <span>📋 Columnas: <strong>${result.columns.length}</strong></span>
+                    <span>⏱️ Tiempo: <strong>${executionTime}ms</strong></span>
+                </div>
+            `;
+            
+            // Tabla de resultados
+            let html = '<div class="table-container">';
+            html += '<table class="data-table">';
+            
+            // Encabezados
+            html += '<tr>';
+            result.columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr>';
+            
+            // Datos
+            result.values.forEach((row, index) => {
+                html += `<tr ${index % 2 === 0 ? 'style="background: rgba(0, 212, 255, 0.05);"' : ''}>`;
+                row.forEach(cell => {
+                    if (cell === null) {
+                        html += '<td style="color: #999; font-style: italic;">NULL</td>';
+                    } else if (typeof cell === 'number') {
+                        html += `<td style="text-align: right; font-weight: 500;">${cell}</td>`;
+                    } else {
+                        html += `<td>${cell}</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            html += '</div>';
+            
+            // Mostrar consulta ejecutada
+            html += `<div style="margin-top: 15px; padding: 10px; background: rgba(0, 0, 0, 0.05); border-radius: 5px; font-family: 'Courier New', monospace; font-size: 12px; color: #666;">
+                <strong>Consulta ejecutada:</strong><br>${query}
+            </div>`;
+            
+            resultArea.innerHTML = html;
+        }
+
+        // Función para mostrar resultados simples (actualizada)
+        function showResult(message, type) {
+            // Esta función ahora se usa principalmente para mensajes de estado
+            const statusColor = type === 'success' ? '#00cc66' : '#cc0033';
+            const icon = type === 'success' ? '✅' : '❌';
+            
+            // Crear un mensaje temporal en la parte superior
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? 'rgba(0, 255, 136, 0.95)' : 'rgba(255, 51, 102, 0.95)'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                z-index: 1000;
+                font-weight: bold;
+                backdrop-filter: blur(10px);
+                animation: slideIn 0.3s ease;
+            `;
+            messageDiv.innerHTML = `${icon} ${message}`;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Remover después de 4 segundos
+            setTimeout(() => {
+                messageDiv.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        // Función para verificar la solución
+        function checkSolution(userQuery) {
+            if (!currentChallenge) return false;
+            
+            try {
+                // Ejecutar la solución esperada
+                const expectedResult = gameState.db.exec(currentChallenge.solution);
+                
+                // Ejecutar la consulta del usuario
+                const userResult = gameState.db.exec(userQuery);
+                
+                // Comparar resultados (simplificado)
+                if (expectedResult.length === 0 && userResult.length === 0) {
+                    return true;
+                }
+                
+                if (expectedResult.length !== userResult.length) {
+                    return false;
+                }
+                
+                // Comparar estructura y datos básicos
+                const expected = expectedResult[0];
+                const user = userResult[0];
+                
+                return JSON.stringify(expected.values) === JSON.stringify(user.values);
+                
+            } catch (error) {
+                return false;
+            }
+        }
+
+        // Función para completar un desafío
+        function completeChallenge() {
+            if (!currentChallenge) return;
+            
+            // Otorgar recompensas
+            const reward = currentChallenge.reward;
+            gameState.playerXP += reward.xp || 0;
+            
+            Object.keys(reward).forEach(key => {
+                if (key !== 'xp' && gameState.inventory.hasOwnProperty(key)) {
+                    gameState.inventory[key] += reward[key];
+                }
+            });
+            
+            // Incrementar desafíos completados
+            gameState.completedChallenges++;
+            
+            // Subir de nivel si es necesario
+            if (gameState.playerXP >= gameState.playerLevel * 100) {
+                gameState.playerLevel++;
+                gameState.playerXP = 0;
+                showModal('🎊 ¡Nivel Subido!', 
+                    `¡Felicidades! Ahora eres nivel ${gameState.playerLevel}. Tus habilidades SQL se fortalecen.`);
+            }
+            
+            // Mostrar tip SQL
+            showSQLTip();
+            
+            // Actualizar UI
+            updatePlayerUI();
+            
+            // Avanzar al siguiente desafío
+            setTimeout(() => {
+                gameState.currentChallenge++;
+                loadChallenge();
+            }, 3000);
+        }
+
+        // Función para desbloquear la siguiente isla
+        function unlockNextIsland() {
+            const nextIsland = gameState.currentIsland + 1;
+            if (nextIsland <= Object.keys(islands).length && !gameState.unlockedIslands.includes(nextIsland)) {
+                gameState.unlockedIslands.push(nextIsland);
+                updateIslandButtons();
+            }
+        }
+
+        // Función para mostrar pista
+        function showHint() {
+            if (!currentChallenge) return;
+            
+            showModal('💡 Pista', currentChallenge.hint);
+        }
+
+        // Función para reiniciar desafío
+        function resetChallenge() {
+            document.getElementById('sqlEditor').value = '';
+            document.getElementById('queryResultSection').style.display = 'none';
+            document.getElementById('tipBox').style.display = 'none';
+        }
+
+        // Agregar estilos para animaciones
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Función para mostrar tip SQL
+        function showSQLTip() {
+            const tipBox = document.getElementById('tipBox');
+            const tipText = document.getElementById('tipText');
+            
+            if (currentChallenge && currentChallenge.tip) {
+                tipText.textContent = currentChallenge.tip;
+                tipBox.style.display = 'block';
+            }
+        }
+
+        // Función para mostrar modal
+        function showModal(title, content) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalContent').innerHTML = `<p>${content}</p>`;
+            document.getElementById('achievementModal').style.display = 'block';
+        }
+
+        // Función para cerrar modal
+        function closeModal() {
+            document.getElementById('achievementModal').style.display = 'none';
+        }
+
+        // Función para mostrar finalización del juego
+        function showGameComplete() {
+            showModal('🎉 ¡JUEGO COMPLETADO!', `
+                <div class="achievement">🏆 MAESTRO DE SQL</div>
+                <p>¡Felicidades, Erick! Has dominado el arte del SQL y logrado escapar de las islas misteriosas.</p>
+                <p>🛩️ Tu avión está listo para el despegue final...</p>
+                <p>📜 Has ganado tu diploma como Experto en SQL</p>
+                <div style="margin-top: 20px;">
+                    <div class="achievement">Nivel Final: ${gameState.playerLevel}</div>
+                    <div class="achievement">Desafíos Completados: ${gameState.completedChallenges}/70</div>
+                    <div class="achievement">Supervivientes Rescatados: ${gameState.inventory.survivors}</div>
+                </div>
+            `);
+        }
+
+        // Eventos de teclado para el editor
+        document.addEventListener('DOMContentLoaded', function() {
+            const sqlEditor = document.getElementById('sqlEditor');
+            
+            sqlEditor.addEventListener('keydown', function(e) {
+                // Ctrl+Enter para ejecutar
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    executeQuery();
+                }
+                
+                // Tab para indentación
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 4;
+                }
+            });
+            
+            // Inicializar juego
+            createFloatingSQL();
+            updatePlayerUI();
+            loadChallenge();
+            updateIslandButtons();
+        });
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('achievementModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
